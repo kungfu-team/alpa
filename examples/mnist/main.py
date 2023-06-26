@@ -11,20 +11,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Main file for running the MNIST example.
 
 This file is intentionally kept short. The majority of logic is in libraries
 than can be easily tested and imported in Colab.
 """
 
-from absl import app
-from absl import flags
-from absl import logging
-from clu import platform
-import jax
-from ml_collections import config_flags
+import asyncio
+
+import alpa
+import flax
 import tensorflow as tf
+from absl import app, flags, logging
+from clu import platform
+from ml_collections import config_flags
 
 FLAGS = flags.FLAGS
 
@@ -38,21 +38,35 @@ config_flags.DEFINE_config_file(
 
 
 def main(argv):
-  if len(argv) > 1:
-    raise app.UsageError('Too many command-line arguments.')
+    if len(argv) > 1:
+        raise app.UsageError('Too many command-line arguments.')
 
-  # Hide any GPUs from TensorFlow. Otherwise TF might reserve memory and make
-  # it unavailable to JAX.
-  tf.config.experimental.set_visible_devices([], 'GPU')
+    # Hide any GPUs from TensorFlow. Otherwise TF might reserve memory and make
+    # it unavailable to JAX.
+    tf.config.experimental.set_visible_devices([], 'GPU')
 
-  if FLAGS.use_ray:
-    import train_ray as train
-  else:
-    import train
+    if FLAGS.use_ray:
+        import train_ray as train
+    else:
+        import train
 
-  train.train_and_evaluate(FLAGS.config, FLAGS.workdir)
+    state = train.train_and_evaluate(FLAGS.config, FLAGS.workdir)
+    print("finished train_and_evaluate")
+    #  state_dict = flax.serialization.to_state_dict(state)
+    #  import pickle
+    #  with open('/data/state_dict.pickle', 'wb') as fi:
+    #      pickle.dump(state_dict, fi)
+    #  state_byt = flax.serialization.to_bytes(state)
+    #  with open('/data/state_dict.msgpack', 'wb') as fi:
+    #      fi.write(state_byt)
+    #  state_dict = flax.serialization.to_state_dict(state)
+    #  dic = to_np_arr(state_dict)
+    #  import pickle
+    #  with open('/data/mw_dic.pickle', 'wb') as fi:
+    #      pickle.dump(dic, fi)
+    #  print("finished dump")
 
 
 if __name__ == '__main__':
-  flags.mark_flags_as_required(['config', 'workdir'])
-  app.run(main)
+    flags.mark_flags_as_required(['config', 'workdir'])
+    app.run(main)

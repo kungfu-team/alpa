@@ -5,20 +5,18 @@ import numpy as np
 import optax
 
 import alpa
-from alpa import (parallelize, get_global_cluster,
-                  set_global_virtual_physical_mesh, automatic_remat,
-                  global_config)
+from alpa import (automatic_remat, get_global_cluster, global_config,
+                  parallelize, set_global_virtual_physical_mesh)
 from alpa.model.bert_model import BertConfig, FlaxBertForMaskedLMModule
-from alpa.model.model_util import TrainState
 from alpa.model.gpt_model import FlaxGPTForLMModule
+from alpa.model.model_util import TrainState
 from alpa.pipeline_parallel.stage_construction import get_last_dp_result
 from alpa.util import print_used_time
-
-from util import compute_gpt_parameter_count, compute_gpt_tflops
 from benchmark_parallel_utils import (
-    get_pipeshard_parallel_method, get_shard_parallel_method,
     compile_and_benchmark_pipeshard_training_executable,
-    compile_and_benchmark_shard_training_executable)
+    compile_and_benchmark_shard_training_executable,
+    get_pipeshard_parallel_method, get_shard_parallel_method)
+from util import compute_gpt_parameter_count, compute_gpt_tflops
 
 
 def report_pipeline_breakdown(executable, timer_names, niter):
@@ -162,6 +160,7 @@ def prepare_gpt_bert_input_and_model(model_type,
     )
 
     # Init train state
+    print(f"model_type {model_type}")
     if model_type == "bert":
         model = FlaxBertForMaskedLMModule(bert_config, dtype=dtype)
     elif model_type == "gpt":
@@ -241,13 +240,30 @@ def benchmark_gpt_bert_3d_internal(model_type,
     tflops, parameter_count = compute_gpt_bert_statistics(
         benchmark_case, latencies, virtual_mesh.num_devices)
 
-    # report_pipeline_breakdown(executable,
+    #  report_pipeline_breakdown(executable,
     #                           ["resharding_send", "resharding_recv",
     #                            "compute"],
     #                           niter)
 
     (compute_cost_file_name, forward_stage_layer_ids, submesh_shapes,
      logical_mesh_shapes, autosharding_option_dicts) = get_last_dp_result()
+
+    #  from print_to import print_specs
+    #  print("print specs")
+    #  print_specs(state.params)
+    #  print(f"type {type(executable)}")
+    #  txt = executable.get_hlo_text()
+    #  for i, t in enumerate(txt):
+    #      with open(f"/data/hlo_text_{i}.txt", "w") as fi:
+    #          fi.write(t)
+    import pickle
+    with open("/data/params.pickle", "wb") as fi:
+        pickle.dump(state.params, fi)
+    #  with open("/data/executable.pickle", "wb") as fi:
+    #      pickle.dump(executable, fi)
+    #  with open("/data/state.pickle", "wb") as fi:
+    #      pickle.dump(state, fi)
+
     metadata = {
         "compilation_times": compilation_times,
         "compute_cost_file_name": compute_cost_file_name,
