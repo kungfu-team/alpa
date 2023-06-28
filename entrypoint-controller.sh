@@ -1,6 +1,8 @@
 #!/bin/bash
 
-ray start --head
+nvidia-smi
+
+ray start --head --disable-usage-stats
 
 sleep 20
 

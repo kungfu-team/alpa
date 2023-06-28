@@ -1,5 +1,6 @@
 #!/bin/bash
 
+nvidia-smi
 
 sleep 10
 

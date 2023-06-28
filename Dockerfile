@@ -10,8 +10,6 @@ RUN pip install \
     tensorflow-datasets \
     orbax-checkpoint
 
-EXPOSE 6379
-
 WORKDIR /workspace
 
 ADD . /workspace/alpa
