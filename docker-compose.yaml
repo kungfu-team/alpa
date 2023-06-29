@@ -1,0 +1,32 @@
+---
+version: '2'
+networks:
+  alpa:
+    driver: bridge
+services:
+  controller:
+    image: kungfu.azurecr.io/mw-alpa-local-repo:latest
+    command: ./entrypoint-controller.sh
+    networks: [alpa]
+    shm_size: 10gb
+    volumes: [/data/marcel/ckpt:/ckpt]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0', '1']
+              capabilities: [gpu]
+  worker-0:
+    image: kungfu.azurecr.io/mw-alpa-local-repo:latest
+    command: ./entrypoint-worker.sh
+    networks: [alpa]
+    shm_size: 10gb
+    volumes: [/data/marcel/ckpt:/ckpt]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['2', '3']
+              capabilities: [gpu]

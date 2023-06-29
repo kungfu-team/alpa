@@ -70,3 +70,6 @@ docs/tutorials
 
 # macOS temp files
 .DS_Store
+
+# Data
+data

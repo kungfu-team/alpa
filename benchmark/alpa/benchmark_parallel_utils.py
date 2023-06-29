@@ -1,21 +1,21 @@
 """Options of a benchmark case."""
-from collections import namedtuple
 import json
 import os
 import time
-from typing import Optional, Dict, Any, List
+from collections import namedtuple
+from typing import Any, Dict, List, Optional
 
-import numpy as np
 import jax
+import numpy as np
 from jax._src.tree_util import tree_flatten, tree_leaves, tree_unflatten
 
 import alpa
-from alpa import (AutoShardingOption, ShardParallel, PipeshardParallel,
-                  ManualStageOption, AutoStageOption, AutoLayerOption,
-                  global_config, PhysicalDeviceMesh)
+from alpa import (AutoLayerOption, AutoShardingOption, AutoStageOption,
+                  ManualStageOption, PhysicalDeviceMesh, PipeshardParallel,
+                  ShardParallel, global_config)
 from alpa.timer import timers
-from alpa.util import (print_used_time, to_str_round,
-                       count_communication_primitives, GB)
+from alpa.util import (GB, count_communication_primitives, print_used_time,
+                       to_str_round)
 
 BenchmarkCase = namedtuple("BenchmarkCase", [
     "batch_size", "model_config", "num_micro_batches", "parallel_mode",
@@ -220,6 +220,19 @@ def benchmark_training_executable(niter,
     # Benchmark step time
     warmup = 2 if niter >= 5 else 1
 
+    # State
+    ckpt_dir = "/ckpt"
+    step = 2
+    state_ps = executable.get_input_placement_specs()
+    state_ps = state_ps[0] # alpa.model.model_util.TrainState
+    try:
+        state = alpa.serialization.restore_checkpoint(ckpt_dir=ckpt_dir,
+                                                      step=step,
+                                                      placement_specs=state_ps)
+        print("Restored checkpoint")
+    except FileNotFoundError as e:
+        print(f"Didn't restore checkpoint {e}")
+
     if profile_driver_time:
         # Benchmark latency with driver overhead
         global_config.use_dummy_value_for_benchmarking = False
@@ -247,6 +260,11 @@ def benchmark_training_executable(niter,
                 # Get the actual state out.
                 state = state[0]
             executable.sync()
+
+            # State
+            alpa.serialization.save_checkpoint(ckpt_dir=ckpt_dir,
+                                               target=state,
+                                               step=i)
 
         latencies = executable.get_execution_time_costs()[warmup:]
 
